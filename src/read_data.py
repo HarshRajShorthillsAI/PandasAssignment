@@ -4,48 +4,48 @@ import os
 from pathlib import Path
 
 class ReadData:
-    folder_path = None
 
-    @classmethod
-    def concatenate_data(cls, files:list[str], resultant_dataframe:pd.DataFrame)->pd.DataFrame:
+    def __init__(self, folder_path:str):
+        self.folder_path = folder_path
+        self.resultant_dataframe = pd.DataFrame()
+
+    def concatenate_data(self, files:list[str])->None:
         # read these files as dataframe and concatenate them to resultant dataframe
         for file in files:
             if file.endswith('.tsv.gz'):
-                data = pd.read_csv(f"{ReadData.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
+                data = pd.read_csv(f"{self.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
             else:
                 continue
-            print(f"Data from {ReadData.folder_path}/{file}")
-            ReadData.analyze_dataframe(data)
-            resultant_dataframe = pd.concat([resultant_dataframe, data], axis=0)
+            print(f"Data from {self.folder_path}/{file}")
+            self.analyze_dataframe(data)
+            self.resultant_dataframe = pd.concat([self.resultant_dataframe, data], axis=0, ignore_index=True)
+
             del data
-        
-        return resultant_dataframe
     
-    @classmethod
-    def load_zipped_data(cls)->None:
+    def load_zipped_data(self)->None:
         # create empty dataframe
-        resultant_dataframe = pd.DataFrame()
+        self.resultant_dataframe = pd.DataFrame()
 
         # list the files in the data folder
-        files = os.listdir(ReadData.folder_path)
+        files = os.listdir(self.folder_path)
 
         # read these files as dataframe and concatenate them to resultant dataframe
-        resultant_dataframe = ReadData.concatenate_data(files, resultant_dataframe)
+        self.concatenate_data(files)
 
         # basic stats for resultant dataframe
-        if resultant_dataframe.empty == False:
-            ReadData.analyze_dataframe(resultant_dataframe)
+        if self.resultant_dataframe.empty == False:
+            self.analyze_dataframe(self.resultant_dataframe)
 
     @classmethod
-    def load_new_zipped_data(cls, stored_dataframe_file:str, used_files:str)->None:
+    def load_new_zipped_data(self, stored_dataframe_file:str, used_files:str)->None:
         # Read files list of data folder content
-        files_list = os.listdir(ReadData.folder_path)
+        files_list = os.listdir(self.folder_path)
         
         stored_data = None
 
         # Check if the resultant dataframe file is stored in the data folder
         if Path(f"./Data/{stored_dataframe_file}").exists() == True:
-            stored_data = pd.read_csv(f"{ReadData.folder_path}/{stored_dataframe_file}", header=None, on_bad_lines='skip', delimiter='\t')
+            stored_data = pd.read_csv(f"{self.folder_path}/{stored_dataframe_file}", header=None, on_bad_lines='skip', delimiter='\t')
         else:
             stored_data = pd.DataFrame()
 
@@ -65,14 +65,14 @@ class ReadData:
 
         # append those new dataframes to resultant dataframe
         for file in unread_list:
-            data = pd.read_csv(f"{ReadData.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
-            print(f"Data from {ReadData.folder_path}/{file}")
-            ReadData.analyze_dataframe(data)
+            data = pd.read_csv(f"{self.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
+            print(f"Data from {self.folder_path}/{file}")
+            self.analyze_dataframe(data)
             stored_data = pd.concat([stored_data, data], axis=0)
             del data
 
         # show basic stats for the resultant dataframe
-        ReadData.analyze_dataframe(stored_data)
+        self.analyze_dataframe(stored_data)
 
     @classmethod
     def analyze_dataframe(cls, data:pd.DataFrame)->None:
