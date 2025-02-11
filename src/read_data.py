@@ -9,15 +9,18 @@ class ReadData:
         self.folder_path = folder_path
         self.resultant_dataframe = pd.DataFrame()
 
-    def concatenate_data(self, files:list[str])->None:
+    def concatenate_data(self, files:list[str], verbose:int)->None:
         # read these files as dataframe and concatenate them to resultant dataframe
+
         for file in files:
             if file.endswith('.tsv.gz'):
                 data = pd.read_csv(f"{self.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
             else:
                 continue
             print(f"Data from {self.folder_path}/{file}")
-            self.analyze_dataframe(data)
+            
+            if verbose!=0:
+                self.analyze_dataframe(data)
             self.resultant_dataframe = pd.concat([self.resultant_dataframe, data], axis=0, ignore_index=True)
 
             del data
@@ -29,15 +32,17 @@ class ReadData:
         # list the files in the data folder
         files = os.listdir(self.folder_path)
 
+        verbose = 0
+        verbose = int(input("Do you want to print the data being loaded from the folder(No=0,Yes=1)"))
+
         # read these files as dataframe and concatenate them to resultant dataframe
-        self.concatenate_data(files)
+        self.concatenate_data(files, verbose)
 
-        # basic stats for resultant dataframe
-        if self.resultant_dataframe.empty == False:
-            self.analyze_dataframe(self.resultant_dataframe)
+        # # basic stats for resultant dataframe
+        # if self.resultant_dataframe.empty == False:
+        #     self.analyze_dataframe(self.resultant_dataframe)
 
-    @classmethod
-    def load_new_zipped_data(self, stored_dataframe_file:str, used_files:str)->None:
+    def load_new_zipped_data(self, stored_dataframe_file:str, used_files:str)->None: #Not used
         # Read files list of data folder content
         files_list = os.listdir(self.folder_path)
         
@@ -74,7 +79,8 @@ class ReadData:
         # show basic stats for the resultant dataframe
         self.analyze_dataframe(stored_data)
 
-    @classmethod
-    def analyze_dataframe(cls, data:pd.DataFrame)->None:
-        print(f"Resultant dataframe after concatenation:\n{data.head(10)}\ndataframe shape:{data.shape}\n")
+    def analyze_dataframe(self, data:pd.DataFrame)->None:
+        assert data.empty == False, "Cannot analyze empty dataframe"
+
+        print(f"Data from dataframe:\n{data.head(10)}\ndataframe shape:{data.shape}\n")
         print(f"Resultant dataframe stats:\n{data.describe()}")
