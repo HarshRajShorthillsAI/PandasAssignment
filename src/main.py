@@ -3,10 +3,9 @@ from transform_data import TransformData
 import gc
 
 if __name__ == "__main__":
-    readData = ReadData('./Data')
-    readData.load_zipped_data()
-    transformData = TransformData(readData=readData)
+    read_data = ReadData('./Data')
+    read_data.load_zipped_data()
+    transform_data = TransformData(readData=read_data)
     print(gc.collect())
-    print(transformData)
-    filtered_data = transformData.filter_rows_by_string(patternstr='20113,|,20113,|,20113| 20113| 20113 |20113 ')#regex for string match
-    dataframe_product_list = transformData.create_productlist_dataframe(filtered_data)
+    filtered_data = transform_data.filter_rows_by_string(patternstr=r'20113')#regex for string match
+    dataframe_product_list = transform_data.create_productlist_dataframe(filtered_data)
