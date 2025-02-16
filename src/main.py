@@ -23,6 +23,13 @@ class Main:
         transform_data = TransformData(read_data=read_data)
         transform_data.create_dealer_ad_impression_count_from_postproductlist()
 
+    @classmethod
+    def task5(cls):
+        read_data = ReadData('./Data')
+        transform_data = TransformData(read_data=read_data)
+        transform_data.count_impressions_groupby()
+
 if __name__ == "__main__":
     # Main.task3()
-    Main.task4()
+    # Main.task4()
+    Main.task5()

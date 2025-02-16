@@ -72,3 +72,28 @@ class TransformData:
             gc.collect()
 
         print("Data appended successfully.")
+
+    def count_impressions_groupby(self)->None:
+        resultant_domain = pd.DataFrame()
+        resultant_dealer = pd.DataFrame()
+
+        for chunk in pd.read_csv('dealeradimpression.tsv', delimiter='\t', chunksize=1500000):
+            chunk['impression_count'] = pd.to_numeric(chunk['impression_count'], errors='coerce')
+            chunk['impression_count'] = chunk['impression_count'].fillna(0)
+            grouped_count_by_domain = chunk[['domain', 'impression_count']].groupby(['domain']).sum()
+            # chunk['dealer_id'] = chunk['dealer_id'].fillna('')
+            grouped_count_by_dealerid = chunk[['dealer_id', 'impression_count']].groupby(['dealer_id']).sum()
+
+
+            print(f"Count of impressions groupy domain:\n{grouped_count_by_domain}")
+            print(f"Count of impressions groupy dealer_id:\n{grouped_count_by_dealerid}")
+            if resultant_domain.empty:
+                resultant_domain = grouped_count_by_domain
+            else:
+                resultant_domain += grouped_count_by_domain
+            
+            if resultant_dealer.empty:
+                resultant_dealer = grouped_count_by_dealerid
+            else:
+                resultant_dealer += grouped_count_by_dealerid
+        print(f"resultant sum of impressions grouped by domain:\n{resultant_domain}\n\nresultant sum of impressions grouped by dealer:\n{resultant_dealer}")
