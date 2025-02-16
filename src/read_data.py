@@ -1,5 +1,5 @@
 import pandas as pd
-import numpy
+import gc
 import os
 from pathlib import Path
 
@@ -9,10 +9,21 @@ class ReadData:
         self.folder_path = folder_path
         self.resultant_dataframe = pd.DataFrame()
 
-    def concatenate_data(self, files:list[str], verbose:int)->None:
-        # read these files as dataframe and concatenate them to resultant dataframe
+    def concatenate_data(self, data:pd.DataFrame)->None:
+        self.resultant_dataframe = pd.concat([self.resultant_dataframe, data], axis=0, ignore_index=True)
+        print(f"dataframe memory: {self.resultant_dataframe.info(memory_usage='deep')}")
+        gc.collect()
+    
+    def load_zipped_data(self)->None:
+        self.resultant_dataframe = pd.DataFrame()
+
+        files = os.listdir(self.folder_path)
+
+        verbose = 0
+        verbose = int(input("Do you want to print the data being loaded from the folder(No=0,Yes=1)"))
 
         for file in files:
+            data = None
             if file.endswith('.tsv.gz'):
                 data = pd.read_csv(f"{self.folder_path}/{file}", compression='infer', header=None, on_bad_lines='skip', delimiter='\t')
             else:
@@ -21,22 +32,14 @@ class ReadData:
             
             if verbose!=0:
                 self.analyze_dataframe(data)
-            self.resultant_dataframe = pd.concat([self.resultant_dataframe, data], axis=0, ignore_index=True)
+
+            # read these files as dataframe and concatenate them to resultant dataframe
+            self.concatenate_data(data)
 
             del data
-    
-    def load_zipped_data(self)->None:
-        # create empty dataframe
-        self.resultant_dataframe = pd.DataFrame()
+            gc.collect()
 
-        # list the files in the data folder
-        files = os.listdir(self.folder_path)
-
-        verbose = 0
-        verbose = int(input("Do you want to print the data being loaded from the folder(No=0,Yes=1)"))
-
-        # read these files as dataframe and concatenate them to resultant dataframe
-        self.concatenate_data(files, verbose)
+        del self.folder_path
 
         # # basic stats for resultant dataframe
         # if self.resultant_dataframe.empty == False:
