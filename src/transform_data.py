@@ -7,6 +7,7 @@ class TransformData:
 
     def __init__(self, read_data:ReadData):
         self.readData = read_data
+        self.resultant_groupby = [pd.DataFrame(), pd.DataFrame()]
 
     def clean_dataframe(self)->None:
         self.readData.resultant_dataframe.fillna(str(''), inplace=True)
@@ -20,6 +21,8 @@ class TransformData:
         self.readData.resultant_dataframe.drop(index = self.readData.resultant_dataframe.index[self.readData.resultant_dataframe.iloc[:, 1].astype(str).apply(lambda x: pattern_str not in x.split(','))], inplace=True)
         
         # Concluded that splitting string into list of substrings and then searching is better option than regex search
+
+        self.rename_dataframe_cols()
 
         print(f"Filtered rows for pattern string:\n{self.readData.resultant_dataframe}")
 
@@ -48,52 +51,48 @@ class TransformData:
         gc.collect()
 
     def create_dealer_ad_impression_count_from_postproductlist(self)->None:
-        with open('dealeradimpression.tsv', 'w') as f:
-            pass
 
-        for chunk in pd.read_csv('chunked_saved_data.tsv', delimiter='\t', chunksize=1500000):
-            print(f"columns are: {chunk.columns}")
-            chunk['postproductlist'] = chunk['postproductlist'].astype(str).apply(lambda x: x.split(';'))
-            chunk = chunk.convert_dtypes()
-            print(chunk['postproductlist'])
-            print(chunk.dtypes)
-            
-            data = pd.DataFrame({
-                'dealer_id': chunk['postproductlist'].apply(lambda x: x[0] if len(x) > 0 else None),
-                'ad_id': chunk['postproductlist'].apply(lambda x: x[1] if len(x) > 1 else None),
-                'impression_count': chunk['postproductlist'].apply(lambda x: x[4].split('|')[0].split('=')[1] if len(x) > 4 else None),
-                'rest_post_product_list': chunk['postproductlist'].apply(lambda x: ''.join(x[5:]) if len(x) > 4 else None),
-                'domain': chunk['4'].apply(lambda x: x.split('www.')[1].split('.')[0] if pd.notna(x) and x != '' else '')
-            })
+        # data = pd.read_csv(filename, delimiter='\t')
+        print(f"columns are: {self.readData.resultant_dataframe.columns}")
+        self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].astype(str).apply(lambda x: x.split(';'))
+        self.readData.resultant_dataframe = self.readData.resultant_dataframe.convert_dtypes()
+        print(self.readData.resultant_dataframe)
+        print(self.readData.resultant_dataframe.dtypes)
+        
+        self.readData.resultant_dataframe = pd.DataFrame({
+            'dealer_id': self.readData.resultant_dataframe['postproductlist'].apply(lambda x: x[0] if len(x) > 0 else None),
+            'ad_id': self.readData.resultant_dataframe['postproductlist'].apply(lambda x: x[1] if len(x) > 1 else None),
+            'impression_count': self.readData.resultant_dataframe['postproductlist'].apply(lambda x: x[4].split('|')[0].split('=')[1] if len(x) > 4 else None),
+            'rest_post_product_list': self.readData.resultant_dataframe['postproductlist'].apply(lambda x: ''.join(x[5:]) if len(x) > 4 else None),
+            'domain': self.readData.resultant_dataframe[4].apply(lambda x: x.split('www.')[1].split('.')[0] if pd.notna(x) and x != '' else '')
+        })
 
-            data.to_csv('dealeradimpression.tsv', sep='\t', mode='a', index=False) #data still NDFrame
+        # data.to_csv('dealeradimpression.tsv', sep='\t', mode='a', index=False) #data still NDFrame
 
-            del chunk
-            gc.collect()
+        # del data
+        gc.collect()
 
         print("Data appended successfully.")
 
     def count_impressions_groupby(self)->None:
-        resultant_domain = pd.DataFrame()
-        resultant_dealer = pd.DataFrame()
+        self.readData.resultant_dataframe['impression_count'] = pd.to_numeric(self.readData.resultant_dataframe['impression_count'], errors='coerce')
+        self.readData.resultant_dataframe['dealer_id'] = pd.to_numeric(self.readData.resultant_dataframe['dealer_id'], errors='coerce')
+        self.readData.resultant_dataframe.reset_index()
+        self.readData.resultant_dataframe['impression_count'] = self.readData.resultant_dataframe['impression_count'].fillna(0).astype(int)
+        self.readData.resultant_dataframe['domain'] = self.readData.resultant_dataframe['domain'].fillna('')
+        grouped_count_by_domain = self.readData.resultant_dataframe[['domain', 'impression_count']].groupby(['domain']).sum()
+        self.readData.resultant_dataframe['dealer_id'] = self.readData.resultant_dataframe['dealer_id'].fillna(0).astype(int)
+        grouped_count_by_dealerid = self.readData.resultant_dataframe[['dealer_id', 'impression_count']].groupby('dealer_id').sum()
 
-        for chunk in pd.read_csv('dealeradimpression.tsv', delimiter='\t', chunksize=1500000):
-            chunk['impression_count'] = pd.to_numeric(chunk['impression_count'], errors='coerce')
-            chunk['impression_count'] = chunk['impression_count'].fillna(0)
-            grouped_count_by_domain = chunk[['domain', 'impression_count']].groupby(['domain']).sum()
-            # chunk['dealer_id'] = chunk['dealer_id'].fillna('')
-            grouped_count_by_dealerid = chunk[['dealer_id', 'impression_count']].groupby(['dealer_id']).sum()
-
-
-            print(f"Count of impressions groupy domain:\n{grouped_count_by_domain}")
-            print(f"Count of impressions groupy dealer_id:\n{grouped_count_by_dealerid}")
-            if resultant_domain.empty:
-                resultant_domain = grouped_count_by_domain
-            else:
-                resultant_domain += grouped_count_by_domain
+        print(f"Count of impressions groupy domain:\n{grouped_count_by_domain}")
+        print(f"Count of impressions groupy dealer_id:\n{grouped_count_by_dealerid}")
+        if self.resultant_groupby[0].empty:
+            self.resultant_groupby[0] = grouped_count_by_domain
+        else:
+            self.resultant_groupby[0] += grouped_count_by_domain
             
-            if resultant_dealer.empty:
-                resultant_dealer = grouped_count_by_dealerid
-            else:
-                resultant_dealer += grouped_count_by_dealerid
-        print(f"resultant sum of impressions grouped by domain:\n{resultant_domain}\n\nresultant sum of impressions grouped by dealer:\n{resultant_dealer}")
+        if self.resultant_groupby[1].empty:
+            self.resultant_groupby[1] = grouped_count_by_dealerid
+        else:
+            self.resultant_groupby[1] += grouped_count_by_dealerid
+        print(f"resultant sum of impressions grouped by domain:\n{self.resultant_groupby[0]}\n\nresultant sum of impressions grouped by dealer:\n{self.resultant_groupby[1]}")

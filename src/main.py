@@ -1,5 +1,6 @@
 from read_data import ReadData
 from transform_data import TransformData
+from etl_pipeline import ETLPipeline
 import gc
 import pandas as pd
 
@@ -29,7 +30,12 @@ class Main:
         transform_data = TransformData(read_data=read_data)
         transform_data.count_impressions_groupby()
 
+    @classmethod
+    def task6(cls):
+        ETLPipeline('./Data').run_pipeline()
+
 if __name__ == "__main__":
     # Main.task3()
     # Main.task4()
-    Main.task5()
+    # Main.task5()
+    Main.task6()

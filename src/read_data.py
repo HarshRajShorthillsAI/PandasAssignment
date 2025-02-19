@@ -9,6 +9,13 @@ class ReadData:
         self.folder_path = folder_path
         self.resultant_dataframe = pd.DataFrame()
 
+    def read_files(self, filename:str, verbose:int)->pd.DataFrame:
+        assert filename in os.listdir(self.folder_path), "File not found in directory path specified."
+        data_frame = pd.read_csv(f"{self.folder_path}/{filename}", delimiter='\t', header=None, compression='infer', on_bad_lines='skip')
+        if verbose and data_frame.empty == False:
+            print(f"Dataframe information:\n{data_frame.info()}\nDataframe shape:{data_frame.shape}")
+        return data_frame
+
     def concatenate_data(self, data:pd.DataFrame)->None:
         self.resultant_dataframe = pd.concat([self.resultant_dataframe, data], axis=0, ignore_index=True)
         print(f"dataframe memory: {self.resultant_dataframe.info(memory_usage='deep')}")
