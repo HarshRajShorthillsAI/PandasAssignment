@@ -17,8 +17,9 @@ class TransformData:
         self.readData.resultant_dataframe.rename(columns={0:'date',1:'posteventlist',2:'postproductlist',3:'link'},inplace=True)
 
     def filter_rows_by_string(self, pattern_str:str)->None:
-        
-        self.readData.resultant_dataframe.drop(index = self.readData.resultant_dataframe.index[self.readData.resultant_dataframe.iloc[:, 1].astype(str).apply(lambda x: pattern_str not in x.split(','))], inplace=True)
+        rows = self.readData.resultant_dataframe.iloc[:, 1].astype(str).apply(lambda x: pattern_str not in x.split(','))
+        index = self.readData.resultant_dataframe.index[rows]
+        self.readData.resultant_dataframe.drop(index=index, inplace=True)
         
         # Concluded that splitting string into list of substrings and then searching is better option than regex search
 
@@ -37,7 +38,6 @@ class TransformData:
                 chunk.to_csv(f, sep="\t", index=False, header=(i == 0), mode="a")
                 del chunk  # Immediately free memory
 
-
     def create_productlist_dataframe(self)->None:
         assert set(['postproductlist']).issubset(self.readData.resultant_dataframe.columns), "Dataframe must contain postproductlist column in it"
         # self.clean_dataframe(dataframe=data_frame)
@@ -54,7 +54,8 @@ class TransformData:
 
         # data = pd.read_csv(filename, delimiter='\t')
         print(f"columns are: {self.readData.resultant_dataframe.columns}")
-        self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].astype(str).apply(lambda x: x.split(';'))
+        self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].astype(str)
+        self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].apply(lambda x: x.split(';'))
         self.readData.resultant_dataframe = self.readData.resultant_dataframe.convert_dtypes()
         print(self.readData.resultant_dataframe)
         print(self.readData.resultant_dataframe.dtypes)
@@ -90,9 +91,40 @@ class TransformData:
             self.resultant_groupby[0] = grouped_count_by_domain
         else:
             self.resultant_groupby[0] += grouped_count_by_domain
-            
+        
         if self.resultant_groupby[1].empty:
             self.resultant_groupby[1] = grouped_count_by_dealerid
         else:
             self.resultant_groupby[1] += grouped_count_by_dealerid
         print(f"resultant sum of impressions grouped by domain:\n{self.resultant_groupby[0]}\n\nresultant sum of impressions grouped by dealer:\n{self.resultant_groupby[1]}")
+
+        self.resultant_groupby[0].to_csv("impression_count_grouped_by_domain.csv", sep=',', header=None)
+        self.resultant_groupby[1].to_csv("impression_count_grouped_by_dealer_id.csv", sep=',', header=None)
+
+    def get_product_model_by_evar(self, evar: int, chunk_size: int):
+        # Fill missing values and drop unnecessary columns in place
+        self.readData.resultant_dataframe.fillna('', inplace=True)
+        self.readData.resultant_dataframe.convert_dtypes(infer_objects=True)
+        self.readData.resultant_dataframe.reset_index(inplace=True)
+        self.readData.resultant_dataframe.drop(columns=['impression_count'], inplace=True, errors='ignore')
+
+        # Split the 'rest_post_product_list' column by '|'
+        self.readData.resultant_dataframe['rest_post_product_list'] = \
+            self.readData.resultant_dataframe['rest_post_product_list'].apply(lambda x: x.split('|'))
+        
+        evar_series = []
+
+        for y in self.readData.resultant_dataframe['rest_post_product_list']:
+            found = False
+            for z in y:
+                if evar in z.split('='):
+                    evar_series.append(z.split('=')[1])
+                    found = True
+                    break
+            if not found:
+                evar_series.append('')  # Append '' only if no match is found in the inner loop
+
+
+        self.readData.resultant_dataframe = self.readData.resultant_dataframe.assign(evar_model=pd.Series(data=evar_series, index=self.readData.resultant_dataframe.index))
+
+        print(f"new dataframe created: {self.readData.resultant_dataframe['evar_model']}")

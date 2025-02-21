@@ -2,7 +2,4 @@ __pycache__
 Data
 .ipynb_checkpoints
 __init__.py
-postproductlist20113.tsv.gz
 viewDataFrame.ipynb
-chunked_saved_data.tsv
-dealeradimpression.tsv
