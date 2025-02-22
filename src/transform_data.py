@@ -9,10 +9,6 @@ class TransformData:
         self.readData = read_data
         self.resultant_groupby = [pd.DataFrame(), pd.DataFrame()]
 
-    def clean_dataframe(self)->None:
-        self.readData.resultant_dataframe.fillna(str(''), inplace=True)
-        self.readData.resultant_dataframe = self.readData.resultant_dataframe.convert_dtypes(infer_objects=True)
-
     def rename_dataframe_cols(self)->None:
         self.readData.resultant_dataframe.rename(columns={0:'date',1:'posteventlist',2:'postproductlist',3:'link'},inplace=True)
 
@@ -27,8 +23,6 @@ class TransformData:
 
         print(f"Filtered rows for pattern string:\n{self.readData.resultant_dataframe}")
 
-        # self.store_dataframe_as_tsv(filename="postproductlist20113.tsv.gz")
-
     def store_dataframe_as_tsv(self, filename:str="postproductlist20113.tsv.gz")->None: #causing memory full
 
         chunk_size = 150000  # Adjust if needed (lower = even less RAM usage)
@@ -36,11 +30,10 @@ class TransformData:
         with open("chunked_saved_data.tsv", "w", encoding="utf-8") as f:
             for i, chunk in enumerate(np.array_split(self.readData.resultant_dataframe, len(self.readData.resultant_dataframe) // chunk_size + 1)):
                 chunk.to_csv(f, sep="\t", index=False, header=(i == 0), mode="a")
-                del chunk  # Immediately free memory
+                del chunk  # Immediately frees memory
 
     def create_productlist_dataframe(self)->None:
         assert set(['postproductlist']).issubset(self.readData.resultant_dataframe.columns), "Dataframe must contain postproductlist column in it"
-        # self.clean_dataframe(dataframe=data_frame)
         self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].astype(str).apply(lambda x: x.split(','))
         self.readData.resultant_dataframe = self.readData.resultant_dataframe.explode(['postproductlist'], ignore_index=True)
         print(f"Dataframe with all the products in separate rows:\n{self.readData.resultant_dataframe}")
@@ -52,7 +45,6 @@ class TransformData:
 
     def create_dealer_ad_impression_count_from_postproductlist(self)->None:
 
-        # data = pd.read_csv(filename, delimiter='\t')
         print(f"columns are: {self.readData.resultant_dataframe.columns}")
         self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].astype(str)
         self.readData.resultant_dataframe['postproductlist'] = self.readData.resultant_dataframe['postproductlist'].apply(lambda x: x.split(';'))
@@ -68,9 +60,6 @@ class TransformData:
             'domain': self.readData.resultant_dataframe[4].apply(lambda x: x.split('www.')[1].split('.')[0] if pd.notna(x) and x != '' else '')
         })
 
-        # data.to_csv('dealeradimpression.tsv', sep='\t', mode='a', index=False) #data still NDFrame
-
-        # del data
         gc.collect()
 
         print("Data appended successfully.")
